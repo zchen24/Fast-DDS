@@ -140,6 +140,45 @@ static bool is_partition_in_criterias(const std::string& partition, const std::v
     return returned_value;
 }
 
+static bool check_rule(const std::string& topic_name, const Rule& rule, const std::vector<std::string>& partitions, 
+    const std::vector<Criteria>& criterias, SecurityException& exception)
+{
+    bool returned_value = false;
+
+    if (rule.allow)
+    {
+        returned_value = true;
+
+        if (partitions.empty())
+        {
+            if (!is_partition_in_criterias(std::string(), criterias))
+            {
+                returned_value = false;
+                exception = _SecurityException_(std::string("<empty> partition not found in rule."));
+            }
+        }
+        else
+        {
+            // Search partitions
+            for (auto partition_it = partitions.begin(); returned_value && partition_it != partitions.end();
+                ++partition_it)
+            {
+                if (!is_partition_in_criterias(*partition_it, criterias))
+                {
+                    returned_value = false;
+                    exception = _SecurityException_(*partition_it + std::string(" partition not found in rule."));
+                }
+            }
+        }
+    }
+    else
+    {
+        exception = _SecurityException_(topic_name + std::string(" topic denied by deny rule."));
+    }
+
+    return returned_value;
+}
+
 static bool is_validation_in_time(const Validity& validity)
 {
 #if _MSC_VER != 1800
@@ -1071,37 +1110,7 @@ bool Permissions::check_create_datawriter(const PermissionsHandle& local_handle,
     {
         if(is_topic_in_criterias(topic_name, rule.publishes))
         {
-            if(rule.allow)
-            {
-                returned_value = true;
-
-                if (partitions.empty())
-                {
-                    if (!is_partition_in_criterias(std::string(), rule.publishes))
-                    {
-                        returned_value = false;
-                        exception = _SecurityException_(std::string("<empty> partition not found in rule."));
-                    }
-                }
-                else
-                {
-                    // Search partitions
-                    for (auto partition_it = partitions.begin(); returned_value && partition_it != partitions.end();
-                        ++partition_it)
-                    {
-                        if (!is_partition_in_criterias(*partition_it, rule.publishes))
-                        {
-                            returned_value = false;
-                            exception = _SecurityException_(*partition_it + std::string(" partition not found in rule."));
-                        }
-                    }
-                }
-            }
-            else
-            {
-                exception = _SecurityException_(topic_name + std::string(" topic denied by deny rule."));
-            }
-
+            returned_value = check_rule(topic_name, rule, partitions, rule.publishes, exception);
             break;
         }
     }
@@ -1146,37 +1155,7 @@ bool Permissions::check_create_datareader(const PermissionsHandle& local_handle,
     {
         if(is_topic_in_criterias(topic_name, rule.subscribes))
         {
-            if(rule.allow)
-            {
-                returned_value = true;
-
-                if (partitions.empty())
-                {
-                    if (!is_partition_in_criterias(std::string(), rule.subscribes))
-                    {
-                        returned_value = false;
-                        exception = _SecurityException_(std::string("<empty> partition not found in rule."));
-                    }
-                }
-                else
-                {
-                    // Search partitions
-                    for (auto partition_it = partitions.begin(); returned_value && partition_it != partitions.end();
-                        ++partition_it)
-                    {
-                        if (!is_partition_in_criterias(*partition_it, rule.subscribes))
-                        {
-                            returned_value = false;
-                            exception = _SecurityException_(*partition_it + std::string(" partition not found in rule."));
-                        }
-                    }
-                }
-            }
-            else
-            {
-                exception = _SecurityException_(topic_name + std::string(" topic denied by deny rule."));
-            }
-
+            returned_value = check_rule(topic_name, rule, partitions, rule.subscribes, exception);
             break;
         }
     }
@@ -1224,16 +1203,8 @@ bool Permissions::check_remote_datawriter(const PermissionsHandle& remote_handle
         {
             if(is_topic_in_criterias(publication_data.topicName(), rule.publishes))
             {
-                if(rule.allow)
-                {
-                    returned_value = true;
-                }
-                else
-                {
-                    exception = _SecurityException_(publication_data.topicName() +
-                            std::string(" topic denied by deny rule."));
-                }
-
+                returned_value = check_rule(publication_data.topicName(), rule, publication_data.m_qos.m_partition.getNames(),
+                    rule.publishes, exception);
                 break;
             }
         }
@@ -1283,27 +1254,20 @@ bool Permissions::check_remote_datareader(const PermissionsHandle& remote_handle
     {
         if(is_domain_in_set(domain_id, rule.domains))
         {
-            if(is_topic_in_criterias(subscription_data.topicName(), rule.subscribes))
+            const std::string& topic_name = subscription_data.topicName();
+            const std::vector<std::string>& partitions = subscription_data.m_qos.m_partition.getNames();
+            if(is_topic_in_criterias(topic_name, rule.subscribes))
             {
-                if(rule.allow)
-                {
-                    returned_value = true;
-                }
-                else
-                {
-                    exception = _SecurityException_(subscription_data.topicName() +
-                            std::string(" topic denied by deny rule."));
-                }
-
+                returned_value = check_rule(topic_name, rule, partitions, rule.subscribes, exception);
                 break;
             }
 
-            if (is_topic_in_criterias(subscription_data.topicName(), rule.relays))
+            if (is_topic_in_criterias(topic_name, rule.relays))
             {
-                if (rule.allow)
+                returned_value = check_rule(topic_name, rule, partitions, rule.relays, exception);
+                if (returned_value)
                 {
                     relay_only = true;
-                    returned_value = true;
                 }
 
                 break;
