@@ -40,8 +40,8 @@
 #include <fastdds/rtps/builtin/discovery/participant/PDPServer.h>
 #include <fastdds/rtps/builtin/discovery/endpoint/EDPServer.h>
 
-
 #include <fastdds/rtps/writer/ReaderProxy.h>
+#include <rtps/builtin/data/ProxyHashTables.hpp>
 
 #include <algorithm>
 #include <forward_list>
@@ -1260,13 +1260,37 @@ bool PDPServer::remove_remote_participant(
         ParticipantDiscoveryInfo::DISCOVERY_STATUS reason)
 {
     InstanceHandle_t key;
+    ParticipantProxyData* pdata = nullptr;
 
-    if (partGUID == getLocalParticipantProxyData()->m_guid
-            || !lookup_participant_key(partGUID, key))
-    {   // verify it's a known participant
+    // verify it's a known participant
+    if (partGUID != getLocalParticipantProxyData()->m_guid)
+    {
+        std::lock_guard<std::recursive_mutex> lock(*mp_mutex);
+
+        for (ResourceLimitedVector<ParticipantProxyData*>::iterator pit = participant_proxies_.begin();
+                pit != participant_proxies_.end(); ++pit)
+        {
+            if ((*pit)->m_guid == partGUID)
+            {
+                pdata = *pit;
+                break;
+            }
+        }
+
+        if ( nullptr == pdata )
+        {
+            return false;
+        }
+
+        // retrieve participant key
+        key = pdata->m_key;
+    }
+    else
+    {
         return false;
     }
 
+    if (ParticipantDiscoveryInfo::DROPPED_PARTICIPANT == reason)
     {
         // prevent mp_PDPReaderHistory from been clean up by the PDPServerListener
         std::lock_guard<RecursiveTimedMutex> lock(mp_PDPReader->getMutex());
@@ -1278,13 +1302,14 @@ bool PDPServer::remove_remote_participant(
         if (!(mp_PDPReaderHistory->get_max_change(&pC) &&
                 pC->kind == NOT_ALIVE_DISPOSED_UNREGISTERED && // last message received is a DATA(p[UD])
                 pC->instanceHandle == key )) // from the same participant I'm going to report
-        {   // We must create the DATA(p[UD])
+        {
+            // We must create the DATA(p[UD])
             if ((pC = mp_PDPWriter->new_change(
-                [this]() -> uint32_t
-                {
-                    return mp_builtin->m_att.writerPayloadSize;
-                },
-                NOT_ALIVE_DISPOSED_UNREGISTERED, key)))
+                        [this]() -> uint32_t
+                        {
+                            return mp_builtin->m_att.writerPayloadSize;
+                        },
+                        NOT_ALIVE_DISPOSED_UNREGISTERED, key)))
             {
                 // Use this server identity in order to hint clients it's a lease duration demise
                 WriteParams wp;
@@ -1296,25 +1321,70 @@ bool PDPServer::remove_remote_participant(
 
                 if (mp_PDPWriterHistory->add_change(pC, wp))
                 {
-                    // Impersonate
-                    pC->writerGUID = GUID_t(partGUID.guidPrefix, c_EntityId_SPDPWriter);
-
-                    logInfo(RTPS_PDP, "Server created a DATA(p[UD]) for a lease duration casualty.")
+                    logInfo(RTPS_PDPSERVER_TRIM, "Server created a DATA(p[UD]) for a lease duration casualty.")
                 }
             }
         }
 
     }
 
+    // Identify demise participant subscriber and publishers' history data for disposal
+    key_list disposed_publishers, disposed_subscribers;
+
+    {
+        // protect reader and writers collections
+        std::lock_guard<std::recursive_mutex> lock(*mp_mutex);
+
+        for (auto pit : *pdata->m_readers)
+        {
+            ReaderProxyData* rit = pit.second;
+            if (rit->guid() != c_Guid_Unknown)
+            {
+                logInfo(RTPS_PDPSERVER_TRIM,
+                        "EDPServer mark the following Subscriber DATA for trimming " << rit->guid());
+                disposed_subscribers.insert(rit->key());
+            }
+        }
+
+        // Mark the demise participant publisher's history data for disposal
+        for (auto pit : *pdata->m_writers)
+        {
+            WriterProxyData* wit = pit.second;
+            if (wit->guid() != c_Guid_Unknown)
+            {
+                logInfo(RTPS_PDPSERVER_TRIM,
+                        "EDPServer mark the following Publisher DATA for trimming " << wit->guid());
+                disposed_publishers.insert(wit->key());
+            }
+        }
+    }
+
+    // call base class, this will effectively wipe out the endpoints data
     bool res = PDP::remove_remote_participant(partGUID, reason);
+
+    // Mark the demise participant subscriber's history data for disposal. We must do it after removal this data from
+    // the server database to avoid confuse the trim mechanism that would consider this endpoints resurrect and avoid
+    // history cleaning
+    {
+        EDPServer* pEDP = dynamic_cast<EDPServer*>(getEDP());
+        assert(pEDP);
+
+        for (auto sub_key : disposed_subscribers)
+        {
+            pEDP->removeSubscriberFromHistory(sub_key);
+        }
+
+        for (auto pub_key : disposed_publishers)
+        {
+            pEDP->removePublisherFromHistory(pub_key);
+        }
+    }
 
     // Trigger the WriterHistory cleaning mechanism of demised participants DATA. Note that
     // only DATA acknowledge by all clients would be actually removed
-    if(res)
+    if (res)
     {
-        InstanceHandle_t ih;
-
-        removeParticipantFromHistory(ih = partGUID);
+        removeParticipantFromHistory(key);
         removeParticipantForEDPMatch(partGUID);
 
         // awake server event thread
