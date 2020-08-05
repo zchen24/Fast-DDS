@@ -45,6 +45,7 @@ public:
             xmlparser::XMLProfileManager::library_settings(library_settings);
         }
     }
+
 };
 
 
@@ -55,9 +56,9 @@ TEST_P(PubSubHistory, PubSubAsNonReliableKeepLastReaderSmallDepth)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS).
-        history_depth(2).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    history_depth(2).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(reader.isInitialized());
 
@@ -72,7 +73,7 @@ TEST_P(PubSubHistory, PubSubAsNonReliableKeepLastReaderSmallDepth)
 
     auto data = default_helloworld_data_generator();
 
-    while(data.size() > 1)
+    while (data.size() > 1)
     {
         auto expected_data(data);
 
@@ -138,10 +139,10 @@ TEST_P(PubSubHistory, PubSubAsReliableKeepLastReaderSmallDepth)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.reliability(RELIABLE_RELIABILITY_QOS).
-        history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS).
-        history_depth(2).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS).
+    history_depth(2).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(reader.isInitialized());
 
@@ -156,7 +157,7 @@ TEST_P(PubSubHistory, PubSubAsReliableKeepLastReaderSmallDepth)
 
     auto data = default_helloworld_data_generator();
 
-    while(data.size() > 1)
+    while (data.size() > 1)
     {
         auto data_backup(data);
         decltype(data) expected_data;
@@ -188,8 +189,8 @@ TEST_P(PubSubHistory, PubSubAsReliableKeepLastWriterSmallDepth)
     ASSERT_TRUE(reader.isInitialized());
 
     writer.
-        history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS).
-        history_depth(2).init();
+    history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS).
+    history_depth(2).init();
 
     ASSERT_TRUE(writer.isInitialized());
 
@@ -217,16 +218,16 @@ TEST(PubSubHistory, PubSubKeepAll)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).
-        history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(reader.isInitialized());
 
     writer.history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
-        max_blocking_time({0, 0}).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    max_blocking_time({0, 0}).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(writer.isInitialized());
 
@@ -237,15 +238,17 @@ TEST(PubSubHistory, PubSubKeepAll)
 
     auto data = default_helloworld_data_generator();
 
-    while(!data.empty())
+    while (!data.empty())
     {
         auto expected_data(data);
 
         // Send data
         writer.send(data);
 
-        for(auto& value : data)
+        for (auto& value : data)
+        {
             expected_data.remove(value);
+        }
 
         // In this test the history has 20 max_samples.
         ASSERT_LE(expected_data.size(), 2u);
@@ -264,17 +267,17 @@ TEST(PubSubHistory, PubSubKeepAllTransient)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).
-        history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(reader.isInitialized());
 
     writer.history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
-        durability_kind(eprosima::fastrtps::TRANSIENT_LOCAL_DURABILITY_QOS).
-        max_blocking_time({0, 0}).
-        resource_limits_allocated_samples(2).
-        resource_limits_max_samples(2).init();
+    durability_kind(eprosima::fastrtps::TRANSIENT_LOCAL_DURABILITY_QOS).
+    max_blocking_time({0, 0}).
+    resource_limits_allocated_samples(2).
+    resource_limits_max_samples(2).init();
 
     ASSERT_TRUE(writer.isInitialized());
 
@@ -285,15 +288,17 @@ TEST(PubSubHistory, PubSubKeepAllTransient)
 
     auto data = default_helloworld_data_generator();
 
-    while(!data.empty())
+    while (!data.empty())
     {
         auto expected_data(data);
 
         // Send data
         writer.send(data);
 
-        for(auto& value : data)
+        for (auto& value : data)
+        {
             expected_data.remove(value);
+        }
 
         // In this test the history has 20 max_samples.
         ASSERT_LE(expected_data.size(), 2u);
@@ -315,9 +320,9 @@ TEST_P(PubSubHistory, PubReliableKeepAllSubNonReliable)
     ASSERT_TRUE(reader.isInitialized());
 
     writer.reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).
-        history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
-        resource_limits_allocated_samples(1).
-        resource_limits_max_samples(1).init();
+    history_kind(eprosima::fastrtps::KEEP_ALL_HISTORY_QOS).
+    resource_limits_allocated_samples(1).
+    resource_limits_max_samples(1).init();
 
     ASSERT_TRUE(writer.isInitialized());
 
@@ -343,10 +348,10 @@ TEST_P(PubSubHistory, StatefulReaderCacheChangeRelease)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.history_depth(2).
-        reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
+    reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
     ASSERT_TRUE(reader.isInitialized());
     writer.history_depth(2).
-        reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
+    reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
     ASSERT_TRUE(writer.isInitialized());
 
     writer.wait_discovery();
@@ -366,7 +371,9 @@ TEST_P(PubSubHistory, StatefulReaderCacheChangeRelease)
 }
 
 template<typename T>
-void send_async_data(PubSubWriter<T>& writer, std::list<typename T::type> data_to_send)
+void send_async_data(
+        PubSubWriter<T>& writer,
+        std::list<typename T::type> data_to_send)
 {
     // Send data
     writer.send(data_to_send);
@@ -380,7 +387,7 @@ TEST_P(PubSubHistory, PubSubAsReliableMultithreadKeepLast1)
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
     reader.history_depth(1).
-        reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
+    reliability(eprosima::fastrtps::RELIABLE_RELIABILITY_QOS).init();
 
     ASSERT_TRUE(reader.isInitialized());
 
@@ -420,11 +427,11 @@ TEST_P(PubSubHistory, PubSubAsReliableKeepLastReaderSmallDepthTwoPublishers)
     PubSubWriter<HelloWorldType> writer2(TEST_TOPIC_NAME);
 
     reader
-        .reliability(RELIABLE_RELIABILITY_QOS)
-        .history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS)
-        .history_depth(1)
-        .resource_limits_allocated_samples(1)
-        .resource_limits_max_samples(1);
+    .reliability(RELIABLE_RELIABILITY_QOS)
+    .history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS)
+    .history_depth(1)
+    .resource_limits_allocated_samples(1)
+    .resource_limits_max_samples(1);
 
     writer.max_blocking_time({ 120, 0 });
     writer2.max_blocking_time({ 120, 0 });
@@ -472,10 +479,75 @@ TEST_P(PubSubHistory, PubSubAsReliableKeepLastReaderSmallDepthTwoPublishers)
     ASSERT_EQ(received.index(), 3u);
 }
 
+// Test created to check bug #8945
+/*!
+ * @fn TEST(PubSubHistory, WriterWithoutReadersTransientLocal)
+ * @brief This test checks that the writer doesn't fill its history while there are no readers matched.
+ *
+ * The test creates a Reliable, Transient Local Writer with a Keep All history, and its resources limited to
+ * 1300 samples.
+ * Then it creates a Reliable, Transient Local Reader with a Keep Last 1 history and waits until both of them discover
+ * each other.
+ * When both of them are matched, the writer sends 13 samples, asserting that all of them have been sent and the
+ * reader starts its reception.
+ * After that, the reader is destroyed, meaning that the writer runs out of readers. Even if there are no readers,
+ * it has to continue sending the remaining samples, deleting the old ones if the history is fulled.
+ */
+TEST_P(PubSubHistory, WriterWithoutReadersTransientLocal)
+{
+    PubSubWriter<Data1mbType> writer(TEST_TOPIC_NAME);
+
+    writer
+    .history_kind(KEEP_ALL_HISTORY_QOS)
+    .durability_kind(TRANSIENT_LOCAL_DURABILITY_QOS)
+    .asynchronously(ASYNCHRONOUS_PUBLISH_MODE)
+    .reliability(RELIABLE_RELIABILITY_QOS)
+    .resource_limits_allocated_samples(13)
+    .resource_limits_max_samples(13)
+    .init();
+
+    ASSERT_TRUE(writer.isInitialized());
+
+    // Remove the reader
+    PubSubReader<Data1mbType> reader(TEST_TOPIC_NAME);
+    reader
+    .reliability(RELIABLE_RELIABILITY_QOS)
+    .durability_kind(TRANSIENT_LOCAL_DURABILITY_QOS)
+    .init();
+
+    ASSERT_TRUE(reader.isInitialized());
+
+    // Wait for discovery.
+    writer.wait_discovery();
+    reader.wait_discovery();
+
+    auto data1 = default_data300kb_data_generator(13);
+    auto data2 = default_data300kb_data_generator(3);
+
+    auto unreceived_data = default_data300kb_data_generator(16);
+
+    // Send data
+    writer.send(data1);
+
+    // In this test all data should be sent.
+    ASSERT_TRUE(data1.empty());
+
+    reader.startReception(unreceived_data);
+
+    reader.destroy();
+
+    // Send data
+    writer.send(data2);
+    // In this test all data should be sent.
+    ASSERT_TRUE(data2.empty());
+
+}
+
 INSTANTIATE_TEST_CASE_P(PubSubHistory,
         PubSubHistory,
         testing::Values(false, true),
-        [](const testing::TestParamInfo<PubSubHistory::ParamType>& info) {
+        [](const testing::TestParamInfo<PubSubHistory::ParamType>& info)
+        {
             if (info.param)
             {
                 return "Intraprocess";
