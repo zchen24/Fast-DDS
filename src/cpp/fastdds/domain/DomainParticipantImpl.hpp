@@ -34,7 +34,11 @@
 #include <fastdds/dds/core/status/StatusMask.hpp>
 #include <fastrtps/types/TypesBase.h>
 
+#include <fastdds/rtps/common/Time_t.h>
+
+
 using eprosima::fastrtps::types::ReturnCode_t;
+using Duration_t = eprosima::fastrtps::Duration_t;
 
 namespace eprosima {
 namespace fastrtps {
@@ -195,6 +199,10 @@ public:
 
     ReturnCode_t delete_topic(
             Topic* topic);
+
+    Topic* find_topic(
+            const std::string& topic_name,
+            const Duration_t& timeout);
 
     /**
      * Looks up an existing, locally created @ref TopicDescription, based on its name.
@@ -418,6 +426,7 @@ private:
     std::map<std::string, TopicImpl*> topics_;
     std::map<fastrtps::rtps::InstanceHandle_t, Topic*> topics_by_handle_;
     mutable std::mutex mtx_topics_;
+    std::condition_variable cv_topic_;
 
     TopicQos default_topic_qos_;
 
