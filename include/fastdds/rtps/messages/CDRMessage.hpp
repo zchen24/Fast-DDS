@@ -45,7 +45,7 @@ inline bool CDRMessage::initCDRMsg(
     msg->msg_endian = BIGEND;
 #else
     msg->msg_endian = LITTLEEND;
-#endif
+#endif // if __BIG_ENDIAN__
     return true;
 }
 
@@ -66,7 +66,7 @@ inline bool CDRMessage::wrapVector(
     msg->msg_endian = BIGEND;
 #else
     msg->msg_endian = LITTLEEND;
-#endif
+#endif // if __BIG_ENDIAN__
     return true;
 }
 
@@ -1218,8 +1218,8 @@ inline bool CDRMessage::readParticipantGenericMessage(
     return true;
 }
 
-}
 } /* namespace rtps */
+} /* namespace fastrtps */
 } /* namespace eprosima */
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
